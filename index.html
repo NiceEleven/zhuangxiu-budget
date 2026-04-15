@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #3b82f6;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .header h1 {
+      font-size: 28px;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+    .header p { color: var(--text-light); font-size: 14px; }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .toolbar-left { display: flex; gap: 10px; flex-wrap: wrap; }
+    .toolbar-right { display: flex; gap: 10px; align-items: center; margin-left: auto; }
+
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { background: #16a34a; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-outline {
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { background: #f1f5f9; }
+
+    .summary-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .summary-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .summary-card h3 { font-size: 13px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .summary-card .value { font-size: 24px; font-weight: 700; color: var(--text); }
+    .summary-card .value.danger { color: var(--danger); }
+    .summary-card .value.success { color: var(--success); }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 12px;
+      padding-left: 12px;
+      border-left: 4px solid var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 24px;
+    }
+    thead { background: #f1f5f9; }
+    th {
+      padding: 12px 8px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    tr.section-header td {
+      background: #e0e7ff;
+      font-weight: 600;
+      color: #3730a3;
+      font-size: 13px;
+    }
+    tr.total-row td {
+      background: #fef3c7;
+      font-weight: 700;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      background: white;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+    }
+    input[type="number"] { -moz-appearance: textfield; }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .col-no { width: 40px; text-align: center; color: var(--text-light); }
+    .col-item { min-width: 120px; }
+    .col-brand { min-width: 80px; }
+    .col-spec { min-width: 80px; }
+    .col-unit { width: 50px; text-align: center; }
+    .col-qty { width: 60px; text-align: right; }
+    .col-price { width: 90px; text-align: right; }
+    .col-subtotal { width: 100px; text-align: right; font-weight: 600; color: var(--primary); }
+    .col-remark { min-width: 100px; }
+    .col-action { width: 40px; text-align: center; }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .delete-btn:hover { color: var(--danger); background: #fee2e2; }
+
+    .add-row-btn {
+      width: 100%;
+      padding: 12px;
+      background: #f1f5f9;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      color: var(--text-light);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+    .add-row-btn:hover { border-color: var(--primary); color: var(--primary); background: #eff6ff; }
+
+    .grand-total {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: white;
+      border-radius: 16px;
+      padding: 28px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.3);
+      margin-bottom: 24px;
+    }
+    .grand-total h2 { font-size: 18px; font-weight: 600; }
+    .grand-total .amount { font-size: 36px; font-weight: 800; }
+    .grand-total .breakdown { font-size: 13px; opacity: 0.85; text-align: right; line-height: 1.8; }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal h2 { margin-bottom: 20px; font-size: 20px; }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .modal-field { display: flex; flex-direction: column; gap: 6px; }
+    .modal-field label { font-size: 13px; color: var(--text-light); font-weight: 500; }
+    .modal-actions { display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end; }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1e293b;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 14px;
+      z-index: 2000;
+      transition: transform 0.3s ease;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .share-url {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .share-url input {
+      flex: 1;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: var(--text);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-light);
+    }
+    .empty-state h3 { margin-bottom: 8px; font-size: 18px; color: var(--text); }
+
+    @media (max-width: 768px) {
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .toolbar-right { margin-left: 0; justify-content: center; }
+      .summary-bar { grid-template-columns: repeat(2, 1fr); }
+      table { font-size: 12px; }
+      th, td { padding: 8px 4px; }
+      .modal-grid { grid-template-columns: 1fr; }
+      .grand-total { flex-direction: column; text-align: center; gap: 12px; }
+      .grand-total .breakdown { text-align: center; }
+      .col-brand, .col-spec, .col-remark { display: none; }
+    }
+
+    .item-paid { text-decoration: line-through; color: #94a3b8; }
+    .paid-badge {
+      display: inline-block;
+      background: #dcfce7;
+      color: #166534;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 50px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>🏠 装修预算表</h1>
+    <p>实时更新 · 自动计算 · 方便分享</p>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="btn-primary" onclick="openModal()">➕ 添加项目</button>
+      <button class="btn-success" onclick="saveToStorage()">💾 保存</button>
+      <button class="btn-outline" onclick="loadFromStorage()">📂 加载</button>
+      <button class="btn-outline" onclick="exportData()">📤 导出</button>
+      <button class="btn-outline" onclick="importData()">📥 导入</button>
+      <button class="btn-outline" onclick="clearAll()">🗑️ 清空</button>
+    </div>
+    <div class="toolbar-right">
+      <div class="share-url">
+        <input type="text" id="shareLink" readonly placeholder="生成分享链接后显示网址...">
+        <button class="btn-primary" onclick="generateShareLink()">🔗 分享</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-bar">
+    <div class="summary-card">
+      <h3>总预算</h3>
+      <div class="value" id="summaryTotal">¥0</div>
+    </div>
+    <div class="summary-card">
+      <h3>已付金额</h3>
+      <div class="value success" id="summaryPaid">¥0</div>
+    </div>
+    <div class="summary-card">
+      <h3>待支付</h3>
+      <div class="value danger" id="summaryUnpaid">¥0</div>
+    </div>
+    <div class="summary-card">
+      <h3>项目数量</h3>
+      <div class="value" id="summaryCount">0</div>
+    </div>
+  </div>
+
+  <div class="grand-total">
+    <div>
+      <h2>💰 装修总费用</h2>
+      <div class="amount" id="grandTotal">¥0</div>
+    </div>
+    <div class="breakdown" id="breakdown">
+      主材费：¥0<br>
+      施工费：¥0<br>
+      其他费用：¥0
+    </div>
+  </div>
+
+  <div id="tableContainer"></div>
+
+  <button class="add-row-btn" onclick="openModal()">➕ 添加新项目</button>
+
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">添加项目</h2>
+    <div class="modal-grid">
+      <div class="modal-field" style="grid-column: span 2;">
+        <label>项目名称 *</label>
+        <input type="text" id="fItem" placeholder="如：客厅地砖">
+      </div>
+      <div class="modal-field">
+        <label>分类</label>
+        <select id="fCategory">
+          <option value="主材">主材</option>
+          <option value="施工">施工</option>
+          <option value="家具">家具</option>
+          <option value="家电">家电</option>
+          <option value="软装">软装</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>品牌</label>
+        <input type="text" id="fBrand" placeholder="如：马可波罗">
+      </div>
+      <div class="modal-field">
+        <label>规格</label>
+        <input type="text" id="fSpec" placeholder="如：800×800">
+      </div>
+      <div class="modal-field">
+        <label>单位</label>
+        <select id="fUnit">
+          <option value="项">项</option>
+          <option value="㎡">㎡</option>
+          <option value="个">个</option>
+          <option value="套">套</option>
+          <option value="米">米</option>
+          <option value="卷">卷</option>
+          <option value="件">件</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>数量</label>
+        <input type="number" id="fQty" placeholder="1" min="0" step="0.01">
+      </div>
+      <div class="modal-field">
+        <label>单价 (¥)</label>
+        <input type="number" id="fPrice" placeholder="0" min="0" step="0.01">
+      </div>
+      <div class="modal-field">
+        <label>备注</label>
+        <input type="text" id="fRemark" placeholder="可选">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn-primary" onclick="submitForm()">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== Supabase 配置 =====
+const SUPABASE_URL = 'https://xeshjeeqiycqyfqdpmns.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhlc2hqZWVxaXljcXlmcWRwbW5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNDI2MTUsImV4cCI6MjA5MTgxODYxNX0.89ioi_EhT2_ZwG59_0UXDvrq0NK0gurvdzGtt27jwVM';
+const { createClient } = window.supabase || {};
+const supabase = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+const CATEGORIES = ['家电', '家具', '窗帘', '施工', '中央空调', '地暖', '全屋智能', '设计师', '已有装备'];
+let data = [];
+let editingIndex = null;
+let saveTimer = null;
+let isRemoteUpdate = false;
+
+
+async function init() {
+  if (supabase) {
+    const { data: row, error } = await supabase
+      .from('budget')
+      .select('data')
+      .eq('id', 'main')
+      .single();
+    if (error || !row) {
+      showToast('⚠️ 加载云端数据失败');
+      const saved = localStorage.getItem('zhuangxiu_data');
+      data = saved ? JSON.parse(saved) : [];
+    } else {
+      data = row.data || [];
+      showToast('☁️ 已加载云端数据');
+    }
+    supabase.channel('budget实时')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'budget', filter: 'id=eq.main' }, (payload) => {
+        if (payload.new && payload.new.data && !isRemoteUpdate) {
+          isRemoteUpdate = true;
+          data = payload.new.data;
+          render();
+          isRemoteUpdate = false;
+        }
+      })
+      .subscribe();
+  } else {
+    const saved = localStorage.getItem('zhuangxiu_data');
+    data = saved ? JSON.parse(saved) : [];
+  }
+  render();
+}
+
+async function saveToStorage() {
+  if (supabase) await supabase.from('budget').upsert({ id: 'main', data });
+  localStorage.setItem('zhuangxiu_data', JSON.stringify(data));
+  showToast('💾 已保存到云端');
+}
+
+function loadFromStorage() {
+  if (!supabase) return;
+  init();
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '装修预算_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 已导出 JSON 文件');
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        data = JSON.parse(ev.target.result);
+        render();
+        showToast('📥 导入成功！');
+      } catch (err) {
+        showToast('❌ 文件格式错误');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function clearAll() {
+  if (confirm('确定要清空所有项目吗？此操作不可恢复。')) {
+    data = [];
+    render();
+    saveToStorage();
+    showToast('🗑️ 已清空并保存');
+  }
+}
+
+function generateShareLink() {
+  // 数据已保存在云端，所有人打开同一网址即可看到最新数据
+  const url = window.location.href.split('?')[0];
+  document.getElementById('shareLink').value = url;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('🔗 链接已复制，发给朋友一起编辑吧！');
+  }).catch(() => {
+    showToast('🔗 链接已生成，请手动复制');
+  });
+}
+
+function openModal(index = null) {
+  editingIndex = index;
+  document.getElementById('modalOverlay').classList.add('active');
+  document.getElementById('modalTitle').textContent = index !== null ? '编辑项目' : '添加项目';
+  
+  if (index !== null) {
+    const row = data[index];
+    document.getElementById('fItem').value = row.item;
+    document.getElementById('fCategory').value = row.category;
+    document.getElementById('fBrand').value = row.brand || '';
+    document.getElementById('fSpec').value = row.spec || '';
+    document.getElementById('fUnit').value = row.unit;
+    document.getElementById('fQty').value = row.qty;
+    document.getElementById('fPrice').value = row.price;
+    document.getElementById('fRemark').value = row.remark || '';
+  } else {
+    document.getElementById('fItem').value = '';
+    document.getElementById('fCategory').value = '主材';
+    document.getElementById('fBrand').value = '';
+    document.getElementById('fSpec').value = '';
+    document.getElementById('fUnit').value = '项';
+    document.getElementById('fQty').value = '1';
+    document.getElementById('fPrice').value = '';
+    document.getElementById('fRemark').value = '';
+  }
+  document.getElementById('fItem').focus();
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+  editingIndex = null;
+}
+
+function submitForm() {
+  const item = document.getElementById('fItem').value.trim();
+  if (!item) {
+    showToast('❌ 请输入项目名称');
+    return;
+  }
+  const row = {
+    item,
+    category: document.getElementById('fCategory').value,
+    brand: document.getElementById('fBrand').value.trim(),
+    spec: document.getElementById('fSpec').value.trim(),
+    unit: document.getElementById('fUnit').value,
+    qty: parseFloat(document.getElementById('fQty').value) || 0,
+    price: parseFloat(document.getElementById('fPrice').value) || 0,
+    remark: document.getElementById('fRemark').value.trim(),
+  };
+
+  if (editingIndex !== null) {
+    data[editingIndex] = row;
+    scheduleSave();
+    showToast('✏️ 已更新');
+  } else {
+    data.push(row);
+    scheduleSave();
+    showToast('✅ 已添加');
+  }
+  closeModal();
+  render();
+}
+
+function deleteRow(i) {
+  if (confirm('确定删除「' + data[i].item + '」？')) {
+    data.splice(i, 1);
+    render();
+    scheduleSave();
+    showToast('🗑️ 已删除');
+  }
+}
+
+function updateField(i, field, value) {
+  if (field === 'item' || field === 'brand' || field === 'spec' || field === 'remark') {
+    data[i][field] = value;
+  } else if (field === 'qty' || field === 'price') {
+    data[i][field] = parseFloat(value) || 0;
+  } else {
+    data[i][field] = value;
+  }
+  render();
+  scheduleSave();
+}
+
+function render() {
+  const container = document.getElementById('tableContainer');
+  let total = 0;
+
+  let html = '';
+
+  CATEGORIES.forEach(cat => {
+    const items = data.map((r, i) => ({ ...r, _index: i })).filter(r => r.category === cat);
+    if (items.length === 0) return;
+
+    const catTotal = items.reduce((sum, r) => sum + r.qty * r.price, 0);
+    total += catTotal;
+
+    html += `
+      <div class="section-title">
+        <span>${cat === '家电' ? '📺' : cat === '家具' ? '🛋️' : cat === '窗帘' ? '🪟' : cat === '施工' ? '🔨' : cat === '中央空调' ? '❄️' : cat === '地暖' ? '🔥' : cat === '全屋智能' ? '🧠' : cat === '设计师' ? '✏️' : cat === '已有装备' ? '✅' : '📦'} ${cat}</span>
+        <span style="font-size:14px;color:var(--primary);font-weight:700;">¥${catTotal.toLocaleString('zh-CN', {minimumFractionDigits: 0})}</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-no">#</th>
+            <th class="col-item">项目</th>
+            <th class="col-brand">品牌</th>
+            <th class="col-spec">规格</th>
+            <th class="col-unit">单位</th>
+            <th class="col-qty">数量</th>
+            <th class="col-price">单价</th>
+            <th class="col-subtotal">小计</th>
+            <th class="col-remark">备注</th>
+            <th class="col-action"></th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    items.forEach((r, idx) => {
+      const subtotal = r.qty * r.price;
+      html += `
+        <tr>
+          <td class="col-no" style="color:var(--text-light);font-size:12px;">${idx + 1}</td>
+          <td class="col-item">
+            <input type="text" value="${r.item}" onchange="updateField(${r._index}, 'item', this.value)" style="font-weight:500;">
+          </td>
+          <td class="col-brand">
+            <input type="text" value="${r.brand}" placeholder="-" onchange="updateField(${r._index}, 'brand', this.value)">
+          </td>
+          <td class="col-spec">
+            <input type="text" value="${r.spec}" placeholder="-" onchange="updateField(${r._index}, 'spec', this.value)">
+          </td>
+          <td class="col-unit">
+            <select onchange="updateField(${r._index}, 'unit', this.value)" style="width:100%;padding:4px 2px;font-size:12px;">
+              ${['项','㎡','个','套','米','卷','件'].map(u => `<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}
+            </select>
+          </td>
+          <td class="col-qty">
+            <input type="number" value="${r.qty}" min="0" step="0.01" onchange="updateField(${r._index}, 'qty', this.value)" style="text-align:right;">
+          </td>
+          <td class="col-price">
+            <input type="number" value="${r.price}" min="0" step="0.01" onchange="updateField(${r._index}, 'price', this.value)" style="text-align:right;" placeholder="0">
+          </td>
+          <td class="col-subtotal">¥${subtotal.toLocaleString('zh-CN', {minimumFractionDigits: 0})}</td>
+          <td class="col-remark">
+            <input type="text" value="${r.remark}" placeholder="-" onchange="updateField(${r._index}, 'remark', this.value)">
+          </td>
+          <td class="col-action">
+            <button class="delete-btn" onclick="deleteRow(${r._index})" title="删除">✕</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += `
+          <tr class="total-row">
+            <td colspan="7" style="text-align:right;font-weight:700;">${cat} 小计</td>
+            <td class="col-subtotal">¥${catTotal.toLocaleString('zh-CN', {minimumFractionDigits: 0})}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+  });
+
+  if (data.length === 0) {
+    html = `
+      <div class="empty-state">
+        <h3>还没有项目</h3>
+        <p>点击上方「添加项目」开始规划您的装修预算</p>
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+
+  // Update summary
+  const count = data.length;
+  const paid = 0;
+  document.getElementById('summaryTotal').textContent = '¥' + total.toLocaleString('zh-CN', {minimumFractionDigits: 0});
+  document.getElementById('summaryPaid').textContent = '¥' + paid.toLocaleString('zh-CN', {minimumFractionDigits: 0});
+  document.getElementById('summaryUnpaid').textContent = '¥' + (total - paid).toLocaleString('zh-CN', {minimumFractionDigits: 0});
+  document.getElementById('summaryCount').textContent = count;
+  document.getElementById('grandTotal').textContent = '¥' + total.toLocaleString('zh-CN', {minimumFractionDigits: 0});
+
+  // Breakdown
+  const jd = data.filter(r => r.category === '家电').reduce((s, r) => s + r.qty * r.price, 0);
+  const jj = data.filter(r => r.category === '家具').reduce((s, r) => s + r.qty * r.price, 0);
+  const cl = data.filter(r => r.category === '窗帘').reduce((s, r) => s + r.qty * r.price, 0);
+  const sg = data.filter(r => r.category === '施工').reduce((s, r) => s + r.qty * r.price, 0);
+  const kt = data.filter(r => r.category === '中央空调').reduce((s, r) => s + r.qty * r.price, 0);
+  const dn = data.filter(r => r.category === '地暖').reduce((s, r) => s + r.qty * r.price, 0);
+  const zn = data.filter(r => r.category === '全屋智能').reduce((s, r) => s + r.qty * r.price, 0);
+  const sj = data.filter(r => r.category === '设计师').reduce((s, r) => s + r.qty * r.price, 0);
+  document.getElementById('breakdown').innerHTML =
+    '家电：¥' + jd.toLocaleString('zh-CN', {minimumFractionDigits: 0}) + '<br>' +
+    '家具：¥' + jj.toLocaleString('zh-CN', {minimumFractionDigits: 0}) + '<br>' +
+    '窗帘：¥' + cl.toLocaleString('zh-CN', {minimumFractionDigits: 0}) + '<br>' +
+    '施工：¥' + sg.toLocaleString('zh-CN', {minimumFractionDigits: 0}) + '<br>' +
+    '中央空调：¥' + kt.toLocaleString('zh-CN', {minimumFractionDigits: 0}) + '<br>' +
+    '地暖：¥' + dn.toLocaleString('zh-CN', {minimumFractionDigits: 0}) + '<br>' +
+    '全屋智能：¥' + zn.toLocaleString('zh-CN', {minimumFractionDigits: 0}) + '<br>' +
+    '设计师：¥' + sj.toLocaleString('zh-CN', {minimumFractionDigits: 0});
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Close modal on overlay click
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+});
+
+// Enter key in modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && document.getElementById('modalOverlay').classList.contains('active')) {
+    submitForm();
+  }
+});
+
+init();
+</script>
+</body>
+</html>
