@@ -433,20 +433,62 @@ let saveTimer = null;
 let isRemoteUpdate = false;
 
 
+const EMBEDDED_DATA = [
+  {item:'电视（客厅）',category:'家电',brand:'TCL',spec:'98寸 C12L',unit:'台',qty:1,price:18008,remark:''},
+  {item:'智能门锁',category:'家电',brand:'小米',spec:'4X Pro',unit:'个',qty:1,price:1800,remark:''},
+  {item:'洗碗机',category:'家电',brand:'美的/西门子',spec:'万象X6S Max',unit:'台',qty:1,price:4500,remark:''},
+  {item:'净水器',category:'家电',brand:'小米',spec:'净水器2 Pro-1200G',unit:'台',qty:1,price:2000,remark:''},
+  {item:'燃气热水器',category:'家电',brand:'',spec:'20L/24L',unit:'台',qty:1,price:0,remark:'待确认'},
+  {item:'微波炉',category:'家电',brand:'',spec:'',unit:'台',qty:1,price:500,remark:''},
+  {item:'冰箱',category:'家电',brand:'COLMO',spec:'600升 铂钛银',unit:'台',qty:1,price:8800,remark:''},
+  {item:'洗碗槽',category:'家电',brand:'方太',spec:'X20.max',unit:'个',qty:1,price:3500,remark:''},
+  {item:'厨余垃圾处理器',category:'家电',brand:'海尔',spec:'820W',unit:'台',qty:1,price:1300,remark:''},
+  {item:'油烟机灶具',category:'家电',brand:'',spec:'',unit:'套',qty:1,price:0,remark:'待确认'},
+  {item:'智能马桶',category:'家电',brand:'',spec:'静音小金刚',unit:'台',qty:1,price:2200,remark:''},
+  {item:'浴缸',category:'家电',brand:'箭牌',spec:'1.5m',unit:'个',qty:1,price:2600,remark:''},
+  {item:'小便器',category:'家电',brand:'',spec:'',unit:'个',qty:1,price:0,remark:''},
+  {item:'小米浴霸',category:'家电',brand:'小米',spec:'P1×2',unit:'台',qty:2,price:2000,remark:''},
+  {item:'洗烘套装',category:'家电',brand:'东芝',spec:'T23pro',unit:'套',qty:1,price:7800,remark:''},
+  {item:'电竞椅×2',category:'家电',brand:'黑白调',spec:'E3 air',unit:'把',qty:2,price:2800,remark:''},
+  {item:'床×1',category:'家具',brand:'',spec:'',unit:'张',qty:1,price:0,remark:'待确认'},
+  {item:'床垫×1',category:'家具',brand:'',spec:'',unit:'张',qty:1,price:0,remark:'待确认'},
+  {item:'沙发',category:'家具',brand:'',spec:'',unit:'件',qty:1,price:0,remark:'待确认'},
+  {item:'茶几',category:'家具',brand:'',spec:'',unit:'件',qty:1,price:0,remark:'待确认'},
+  {item:'餐桌椅×4',category:'家具',brand:'',spec:'',unit:'套',qty:1,price:0,remark:'待确认'},
+  {item:'阳台窗帘',category:'窗帘',brand:'',spec:'',unit:'套',qty:1,price:1000,remark:''},
+  {item:'卧室窗帘×4',category:'窗帘',brand:'',spec:'',unit:'套',qty:4,price:2000,remark:''},
+  {item:'全屋定制',category:'施工',brand:'',spec:'',unit:'项',qty:1,price:85000,remark:''},
+  {item:'封阳台',category:'施工',brand:'',spec:'',unit:'项',qty:1,price:20000,remark:''},
+  {item:'铺设',category:'施工',brand:'',spec:'',unit:'项',qty:1,price:0,remark:'待确认'},
+  {item:'大金P+温湿平衡',category:'中央空调',brand:'大金',spec:'',unit:'套',qty:1,price:41700,remark:'定金1k，已付14.5k'},
+  {item:'锅炉（美的HNM1）',category:'地暖',brand:'美的',spec:'',unit:'台',qty:1,price:16700,remark:''},
+  {item:'全屋智能',category:'全屋智能',brand:'',spec:'',unit:'项',qty:1,price:20000,remark:''},
+  {item:'设计师费',category:'设计师',brand:'',spec:'',unit:'项',qty:1,price:0,remark:''},
+  {item:'回音壁（三星Q990D）',category:'已有装备',brand:'三星',spec:'Q990D',unit:'台',qty:1,price:0,remark:'客厅已有'},
+  {item:'扫地机器人（石头P20Pro）',category:'已有装备',brand:'石头',spec:'P20pro',unit:'台',qty:1,price:0,remark:'阳台已有'},
+  {item:'电视（索尼XR-55X91J）',category:'已有装备',brand:'索尼',spec:'XR-55X91J 55寸',unit:'台',qty:1,price:0,remark:''},
+  {item:'咖啡机（飞利浦EP3146）',category:'已有装备',brand:'飞利浦',spec:'EP3146黑金',unit:'台',qty:1,price:0,remark:'客厅已有'},
+];
+
 async function init() {
   if (supabase) {
-    const { data: row, error } = await supabase
-      .from('budget')
-      .select('data')
-      .eq('id', 'main')
-      .single();
-    if (error || !row) {
-      showToast('⚠️ 加载云端数据失败');
-      const saved = localStorage.getItem('zhuangxiu_data');
-      data = saved ? JSON.parse(saved) : [];
-    } else {
-      data = row.data || [];
-      showToast('☁️ 已加载云端数据');
+    try {
+      const { data: row } = await supabase
+        .from('budget')
+        .select('data')
+        .eq('id', 'main')
+        .single();
+      if (row && row.data && row.data.length > 0) {
+        data = row.data;
+        showToast('☁️ 已加载云端数据');
+      } else {
+        data = [...EMBEDDED_DATA];
+        showToast('📦 显示内置数据，可编辑后保存');
+        await saveToStorage();
+      }
+    } catch (e) {
+      data = [...EMBEDDED_DATA];
+      showToast('📦 显示内置数据（云端暂不可用）');
     }
     supabase.channel('budget实时')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'budget', filter: 'id=eq.main' }, (payload) => {
@@ -460,7 +502,7 @@ async function init() {
       .subscribe();
   } else {
     const saved = localStorage.getItem('zhuangxiu_data');
-    data = saved ? JSON.parse(saved) : [];
+    data = saved ? JSON.parse(saved) : [...EMBEDDED_DATA];
   }
   render();
 }
